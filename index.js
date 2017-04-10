@@ -1,11 +1,31 @@
-var app = require('express')();
-var http = require('http').Server(app);
+var http = require("http")
+var express = require("express")
+var app = express()
 var port = process.env.PORT || 5000;
+var io = require('socket.io');
 
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
+app.use(express.static(__dirname + "/"))
+
+var server = http.createServer(app);
+
+io = io(server);
+
+var users = [];
+
+io.use(function(socket, next) {
+  console.log("Query: ", socket.handshake.query);
+  socket.handshake.query.user && users.push(socket.handshake.query.user);
+  console.log(users);
+  next();
 });
 
-http.listen(port, function(){
-  console.log('listening on *: %d', port);
+
+io.on('connection', function (socket) {
+  console.log(socket.handshake.query.user);
+  io.emit('new user', 1);
+  socket.on('chat message', function (msg) {
+    io.emit('chat message', msg);
+  });
 });
+
+server.listen(port);
