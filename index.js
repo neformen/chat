@@ -12,17 +12,16 @@ io = io(server);
 
 var users = [];
 
+var messageLogs = [];
+
 
 io.use(function(socket, next) {
-  console.log("Query: ", socket.handshake.query);
-
   if (socket.handshake.query.user) {
     let name = socket.handshake.query.user,
         id = socket.id;
     
     users.push({name,id});
   }
-  console.log(users);
   next();
 });
 
@@ -36,13 +35,19 @@ io.on('connection', function (socket) {
       ByeMessage = `${user.name} leave the chat`
 
   
-  user.name && io.emit('chat message', greetingMessage);
+  user.name && socket.broadcast.emit('chat message', greetingMessage);
+  messageLogs.unshift(greetingMessage);
 
   socket.on('chat message', function (msgObj) {
+
     if (msgObj.idTo) {
       socket.broadcast.to(msgObj.idTo).emit('chat message', msgObj.message);
+    } else if (msgObj.img) {
+      io.emit('chat image', msgObj);
     } else {
       socket.broadcast.emit('chat message', msgObj.message);
+      messageLogs.unshift(msgObj.message);
+      messageLogs.splice(9);
     }
   });
 
@@ -56,8 +61,12 @@ io.on('connection', function (socket) {
 
   io.emit('new user', users);
 
+  socket.emit('chat message',  messageLogs.reverse());
+
   socket.on('disconnect', function() {
-    user.name && io.emit('chat message', ByeMessage);
+    user.name && socket.broadcast.emit('chat message', ByeMessage);
+    messageLogs.unshift(ByeMessage);
+    messageLogs.splice(9);
 
     let index = users.indexOf(user);
     users.splice(index, 1);
