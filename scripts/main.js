@@ -22,9 +22,6 @@
     });
 
     function initChat(socket, user) {
-        let stopTyping = debounce(() => {
-            socket.emit('stop typing', user.name);
-        }, 500);
 
         $messageForm.submit(() => {
             let file = $("#file").prop('files')[0];
@@ -37,6 +34,7 @@
                         user: user.name,
                         img: evt.target.result
                     });
+                    $("#file").val('');
                 };
 
                 reader.readAsDataURL(file);
@@ -49,6 +47,8 @@
                 socket.emit('chat message', messageObj);
                 $messages.append($('<li>').text(message));
                 $messageText.val('');
+                debugger
+                $typingHint.find(`#${socket.id}`).remove();
             }
             return false;
         });
@@ -67,28 +67,47 @@
             $messages.append($('<li>').text(msg.user).append($('<img>').attr('src', msg.img)));
         });
 
-        socket.on('new user', (users) => {
-            $usersList.empty();
+        socket.on('new user', (user) => {
+            $usersList.append($('<li>').addClass('online-user').text(user.name).attr('data-id', user.id));
+        });
+
+        socket.on('delete user', (user) => {
+            $(`*[data-id=${user.id}]`).remove();
+        });
+
+        socket.on('init all users', (users) => {
+            $usersList.append($('<li>').addClass('online-user selected send-all').text('Send to all').attr('data-id', ''));
             users.forEach((user) => {
                 $usersList.append($('<li>').addClass('online-user').text(user.name).attr('data-id', user.id));
             });
-
-            $usersList.append($('<li>').addClass('online-user selected').text('Send to all').attr('data-id', ''));
         });
 
-        socket.on('start typing', (nickname) => {
-            $typingHint.text(`${nickname} start typing`);
+        socket.on('start typing', (user) => {
+            if (!$typingHint.find(`#${user.id}`).length) {
+                $typingHint.append($('<span>').attr('id', user.id).html(`${user.name} is typing... <br>`));
+            }
         });
 
-        socket.on('stop typing', (nickname) => {
-            $typingHint.text('');
+        socket.on('stop typing', (user) => {
+            $typingHint.find(`#${user.id}`).remove();
         });
 
+        let stopTyping = debounce(() => {
+            socket.emit('stop typing', {
+                name: user.name,
+                id: socket.id
+            });
+        }, 500);
 
-        $messageText.on('keydown', () => {
-            socket.emit('start typing', user.name);
+        $messageText.on('keydown', (event) => {
+            if (event.keyCode !== 13) {
+                socket.emit('start typing', {
+                    name: user.name,
+                    id: socket.id
+                });
 
-            stopTyping();
+                stopTyping();
+            }
         });
 
         $usersList.on('click', '.online-user', (event) => {
