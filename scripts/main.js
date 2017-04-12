@@ -13,11 +13,15 @@
         $messages = $('#messages');
 
     $nicknameForm.submit(function () {
-        user.name = $('#nickname').val()
-        socket = io(host, { query: `user=${user.name}` });
-        $modalWindow.hide();
-        initChat(socket, user);
-
+        user.name = $('#nickname').val();
+        if (user.name) {
+            socket = io(host, { query: `user=${user.name}` });
+            $modalWindow.hide();
+            initChat(socket, user);
+        } else {
+            $('#nickname').addClass('error');
+        }
+        
         return false;
     });
 

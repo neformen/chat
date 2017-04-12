@@ -109,3 +109,7 @@ img {
     max-height: 100px;
     max-width: 100px;
 }
+
+input.error {
+    border-color:  red;
+}
