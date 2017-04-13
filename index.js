@@ -41,8 +41,8 @@ io.on('connection', function (socket) {
 
     if (msgObj.idTo) {
       socket.broadcast.to(msgObj.idTo).emit('chat message', msgObj.message);
-    } else if (msgObj.img) {
-      io.emit('chat image', msgObj);
+    } else if (msgObj.file) {
+      io.emit('chat file', msgObj);
     } else {
       socket.broadcast.emit('chat message', msgObj.message);
       messageLogs.unshift(msgObj.message);

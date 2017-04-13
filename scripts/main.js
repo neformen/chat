@@ -12,12 +12,21 @@
         $messageText = $('#m'),
         $messages = $('#messages');
 
+    if (sessionStorage.getItem('nickname')) {
+        user.name = sessionStorage.getItem('nickname');
+        socket = io(host, { query: `user=${user.name}` });
+        initChat(socket, user);
+    } else {
+        $modalWindow.show();
+    }
+
     $nicknameForm.submit(function () {
         user.name = $('#nickname').val();
         if (user.name) {
             socket = io(host, { query: `user=${user.name}` });
             $modalWindow.hide();
             initChat(socket, user);
+            sessionStorage.setItem('nickname', user.name);
         } else {
             $('#nickname').addClass('error');
         }
@@ -31,17 +40,12 @@
             let file = $("#file").prop('files')[0];
 
             if(file) {
-                let reader = new FileReader();
-
-                reader.onload = function(evt) {
-                    socket.emit('chat message', {
-                        user: user.name,
-                        img: evt.target.result
-                    });
-                    $("#file").val('');
-                };
-
-                reader.readAsDataURL(file);
+                socket.emit('chat message', {
+                    file: $("#file").prop('files')[0],
+                    user: user.name ,
+                    type: $("#file").prop('files')[0].type
+                });
+                $("#file").val('');
             } else {
                 let message = `${user.name}: ${$messageText.val()}`;
                 let messageObj = {
@@ -67,8 +71,12 @@
             }
         });
 
-        socket.on('chat image', (msg) => {
-            $messages.append($('<li>').text(msg.user).append($('<img>').attr('src', msg.img)));
+        socket.on('chat file', (msg) => {
+           var blob = new Blob([msg.file], {type: msg.type});
+           var objectUrl = window.URL.createObjectURL(blob);
+           $messages.append($('<li>').text(`${msg.user}: `).append($('<a>').attr('href', objectUrl).text('download file')));
+           
+
         });
 
         socket.on('new user', (user) => {
