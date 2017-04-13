@@ -55,7 +55,6 @@ $(function() {
                 socket.emit('chat message', messageObj);
                 $messages.append($('<li>').text(message));
                 $messageText.val('');
-                debugger
                 $typingHint.find(`#${socket.id}`).remove();
             }
             return false;
