@@ -1,4 +1,4 @@
-
+$(function() {
     let nickname,
         socket,
         user = {},
@@ -153,3 +153,4 @@
             }, timeToWait);
         };
     }
+});

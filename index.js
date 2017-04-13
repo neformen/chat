@@ -51,11 +51,11 @@ io.on('connection', function (socket) {
   });
 
   socket.on('start typing', function (user) {
-    io.emit('start typing', user);
+    socket.broadcast.emit('start typing', user);
   });
 
   socket.on('stop typing', function (user) {
-    io.emit('stop typing', user);
+    socket.broadcast.emit('stop typing', user);
   });
 
   socket.broadcast.emit('new user', user);
