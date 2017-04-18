@@ -28,25 +28,36 @@ io.on('connection', function (socket) {
         name: socket.handshake.query.user,
         id: socket.id
       },
-      greetingMessage = `${user.name} join the chat`,
-      ByeMessage = `${user.name} leave the chat`
+      messageObj = {
+        user: user.name,
+        messageText: 'start the chat'
+      }
+      historySize = 9,
+      currentLogs = [];
 
   if (user.name) {
-    socket.broadcast.emit('chat message', greetingMessage);
-    messageLogs.unshift(greetingMessage);
-    messageLogs.splice(9);
+    socket.broadcast.emit('chat message', messageObj);
+    messageLogs.unshift({
+      message: messageObj,
+      type: 'chat message'
+    });
   }
 
   socket.on('chat message', function (msgObj) {
 
     if (msgObj.idTo) {
-      socket.broadcast.to(msgObj.idTo).emit('chat message', msgObj.message);
-    } else if (msgObj.file) {
-      io.emit('chat file', msgObj);
+      socket.broadcast.to(msgObj.idTo).emit('chat message', msgObj);
+      socket.emit('chat message', msgObj);
+      messageLogs.unshift({
+        message: msgObj,
+        type: 'chat message'
+      });
     } else {
-      socket.broadcast.emit('chat message', msgObj.message);
-      messageLogs.unshift(msgObj.message);
-      messageLogs.splice(9);
+      io.emit('chat message', msgObj);
+      messageLogs.unshift({
+        message: msgObj,
+        type: 'chat message'
+      });
     }
   });
 
@@ -61,17 +72,41 @@ io.on('connection', function (socket) {
   socket.broadcast.emit('new user', user);
   socket.emit('init all users', users);
 
-  socket.emit('chat message',  messageLogs.reverse());
+  messageLogs.some((msgObj) => {
+    if (msgObj.message.idTo === user.id || msgObj.message.idFrom === user.id) {
+      currentLogs.unshift(msgObj);
+    } else if (!(msgObj.message.idTo) && !(msgObj.message.idTo)) {
+      currentLogs.unshift(msgObj);
+    }
+
+    return (currentLogs.length === historySize);
+  });
+
+  currentLogs.forEach((msgObj) => {
+    socket.emit(msgObj.type, msgObj.message);
+  });
+
+
+
 
   socket.on('disconnect', function() {
-    socket.broadcast.emit('chat message', ByeMessage);
-    messageLogs.unshift(ByeMessage);
-    messageLogs.splice(9);
+    let messageObj = {
+      user: user.name,
+      messageText: "leave the chat"
+    };
+
+    socket.broadcast.emit('chat message', messageObj);
+    messageLogs.unshift({
+      message: messageObj,
+      type: 'chat message'
+    });
 
     let index = users.indexOf(user);
     users.splice(index, 1);
 
-    io.emit('delete user', user);
+    currentLogs = [];
+
+    socket.broadcast.emit('delete user', user);
   });
 });
 

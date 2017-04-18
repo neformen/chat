@@ -35,47 +35,47 @@ $(function() {
     });
 
     function initChat(socket, user) {
-
         $messageForm.submit(() => {
-            let file = $("#file").prop('files')[0];
+            let $file = $("#file").prop('files')[0],
+                messageText = $messageText.val(),
+                messageObj = {};
+            if (!$file && !messageText) return false;
 
-            if(file) {
-                socket.emit('chat message', {
-                    file: $("#file").prop('files')[0],
-                    user: user.name ,
-                    type: $("#file").prop('files')[0].type
-                });
-                $("#file").val('');
-            } else {
-                let message = `${user.name}: ${$messageText.val()}`;
-                let messageObj = {
-                    message,
-                    idTo: targetUserId
-                };
-                socket.emit('chat message', messageObj);
-                $messages.append($('<li>').text(message));
-                $messageText.val('');
-                $typingHint.find(`#${socket.id}`).remove();
+            messageObj = {
+                user: user.name,
+                messageText,
+                idTo: targetUserId,
+                idFrom: socket.id
             }
+
+            if ($file) {
+                messageObj.attachedFile = {
+                    file: $file,
+                    type: $file.type,
+                    name: $file.name
+                }
+            }
+
+            socket.emit("chat message", messageObj);
+
+            $("#file").val('');
+            $messageText.val('');
+            $typingHint.find(`#${socket.id}`).remove();
+
             return false;
         });
 
-        socket.on('chat message', (msgs) => {
-            if ($.isArray(msgs)) {
-                msgs.forEach((msg) => {
-                    $messages.append($('<li>').text(msg));
-                })
-            } else {
-                $messages.append($('<li>').text(msgs));
+        socket.on('chat message', (msgObj) => {
+            let $li = $('<li>').text(`${msgObj.user}: ${msgObj.messageText} `), 
+                $link;
+
+            if (msgObj.attachedFile) {
+                let blob = new Blob([msgObj.attachedFile.file], {type: msgObj.attachedFile.type});
+                let objectUrl = window.URL.createObjectURL(blob);
+                $link = $("<a>").attr('href', objectUrl).attr('download', msgObj.attachedFile.name).text(msgObj.attachedFile.name);
+                $li.append($link);
             }
-        });
-
-        socket.on('chat file', (msg) => {
-           var blob = new Blob([msg.file], {type: msg.type});
-           var objectUrl = window.URL.createObjectURL(blob);
-           $messages.append($('<li>').text(`${msg.user}: `).append($('<a>').attr('href', objectUrl).text('download file')));
-           
-
+             $messages.append($li);
         });
 
         socket.on('new user', (user) => {
